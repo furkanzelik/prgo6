@@ -8,42 +8,38 @@ routes.use(express.json());
 routes.use(express.urlencoded());
 
 
-routes.use((req, res, next) => {
-    const acceptedTypes = req.accepts(['json', 'html']);
 
-    if (!acceptedTypes) {
-        res.sendStatus(400);
-        return;
-    }
-    res.locals.acceptedTypes = acceptedTypes;
-    next();
-})
 
     routes.options('/', function (req, res, next) {
         res.header('Allow', 'GET,POST,OPTIONS');
         res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Content-Type,Content-Length,Accept, Authorization, Origin');
+        res.header('Access-Control-Allow-Headers', 'Origin,X-Request-With,Content-Type,Accept');
         res.header('Access-Control-Allow-Origin', '*');   // globaal plaatsen
 
-        if (req.method === 'OPTIONS') {
-            return res.sendStatus(200);
-        }
-        next();
+        res.sendStatus(200);
+
     });
 
     routes.options('/:id', function (req, res, next) {
-        res.header('Allow', 'GET,POST,DELETE,OPTIONS');
-        res.header('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Content-Type,Content-Length,Accept, Authorization, Origin');
+        res.header('Allow', 'GET,PUT,DELETE,OPTIONS');
+        res.header('Access-Control-Allow-Methods', 'GET,PUT,DELETE,OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Origin,X-Request-With,Content-Type,Accept');
         res.header('Access-Control-Allow-Origin', '*');   // globaal plaatsen
 
-        if (req.method === 'OPTIONS') {
-            return res.sendStatus(200);
-        }
-        next();
+        res.sendStatus(200);
+
     })
 
+    routes.use((req, res, next) => {
+        const acceptedTypes = req.accepts(['json', 'html']);
 
+        if (!acceptedTypes) {
+            res.sendStatus(400);
+            return;
+        }
+        res.locals.acceptedTypes = acceptedTypes;
+        next();
+    })
 
     // get all data
     routes.get('/', async (req, res) => {
@@ -151,8 +147,6 @@ routes.use((req, res, next) => {
                 difficulty: req.body.difficulty
             });
 
-            res.header('Access-Control-Allow-Origin', '*');
-            res.header('Access-Control-Allow-Headers', 'Content-Type,Content-Length,Accept, Authorization, Origin');
             res.status(201).json({message: 'Empire created !'})
 
         } catch (err) {
@@ -183,41 +177,41 @@ routes.use((req, res, next) => {
 
 // update empire
 
-routes.put('/:id', async (req, res) => {
-    try {
-        // Check if any field is empty
-        if (
-            !req.body.civilization ||
-            !req.body.specialty ||
-            !req.body.army ||
-            !req.body.difficulty
-        ) {
-            return res.status(400).json({
-                message: 'All fields must be filled for update',
+    routes.put('/:id', async (req, res) => {
+        try {
+            // Check if any field is empty
+            if (
+                !req.body.civilization ||
+                !req.body.specialty ||
+                !req.body.army ||
+                !req.body.difficulty
+            ) {
+                return res.status(400).json({
+                    message: 'All fields must be filled for update',
+                });
+            }
+
+            // Update only non-empty fields
+            const updateFields = {
+                civilization: req.body.civilization,
+                specialty: req.body.specialty,
+                army: req.body.army,
+                difficulty: req.body.difficulty
+            };
+
+            // Update only if all fields are filled
+            await Empire.updateOne({ _id: req.params.id }, updateFields);
+
+            // Fetch the updated item
+            const item = await Empire.findOne({ _id: req.params.id });
+            res.status(200).json(item);
+        } catch (err) {
+            res.status(400).json({
+                message: 'Could not update',
+                error: err.message,
             });
         }
-
-        // Update only non-empty fields
-        const updateFields = {
-            civilization: req.body.civilization,
-            specialty: req.body.specialty,
-            army: req.body.army,
-            difficulty: req.body.difficulty
-        };
-
-        // Update only if all fields are filled
-        await Empire.updateOne({ _id: req.params.id }, updateFields);
-
-        // Fetch the updated item
-        const item = await Empire.findOne({ _id: req.params.id });
-        res.status(200).json(item);
-    } catch (err) {
-        res.status(400).json({
-            message: 'Could not update',
-            error: err.message,
-        });
-    }
-});
+    });
 
 
 // Delete empire
@@ -231,10 +225,6 @@ routes.put('/:id', async (req, res) => {
             } else {
                 return res.status(204).send({message: 'Empire is deleted !'});
             }
-
-            // res.header('Access-Control-Allow-Origin', '*');
-            // res.header('Access-Control-Allow-Headers', 'Content-Type,Content-Length,Accept, Authorization, Origin');
-            // res.status(201).json({message: 'Empire created !'})
 
         } catch (err) {
             console.log(err);
